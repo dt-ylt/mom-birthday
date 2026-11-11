@@ -247,30 +247,54 @@ body::before{
 }
 .wish-btn:active{background:rgba(243,201,139,.18)}
 .wish-form{
-  display:none;margin-top:24px;
-  align-items:center;justify-content:center;gap:10px;
+  display:none;margin-top:20px;
+  flex-direction:column;align-items:center;gap:11px;
 }
 .wish-form.show{display:flex;animation:tipIn .5s ease both}
+.wish-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+.chip{
+  font-family:var(--sans);font-size:11.5px;letter-spacing:.06em;
+  color:rgba(243,201,139,.8);
+  background:rgba(243,201,139,.07);
+  border:1px solid rgba(243,201,139,.24);
+  border-radius:999px;padding:6px 13px;cursor:pointer;
+  transition:background .25s, border-color .25s, color .25s;
+}
+.chip:active{background:rgba(243,201,139,.22);border-color:rgba(243,201,139,.6);color:#fff2dc}
+.wish-row{position:relative;display:flex;align-items:center}
 #wishInput{
-  width:min(230px,58vw);
+  width:min(264px,70vw);
   background:rgba(255,255,255,.05);
-  border:1px solid rgba(243,201,139,.35);border-radius:999px;
-  padding:11px 17px;color:#f4e9dc;
+  border:1px solid rgba(243,201,139,.3);border-radius:999px;
+  padding:12px 52px 12px 18px;color:#f4e9dc;
   font-family:var(--sans);font-size:12.5px;letter-spacing:.06em;
   outline:none;
+  transition:border-color .3s, box-shadow .3s, background .3s;
 }
-#wishInput::placeholder{color:rgba(244,233,220,.28)}
-#wishInput:focus{border-color:rgba(243,201,139,.7)}
-#wishSend{
-  font-family:var(--serif);font-size:12.5px;letter-spacing:.16em;text-indent:.16em;
-  color:#1a1226;background:linear-gradient(180deg,#ffe2b0,#e9b877);
-  border:none;border-radius:999px;padding:12px 20px;cursor:pointer;
-  white-space:nowrap;
+#wishInput::placeholder{color:rgba(244,233,220,.26)}
+#wishInput:focus{
+  border-color:rgba(243,201,139,.72);
+  background:rgba(255,255,255,.075);
+  box-shadow:0 0 24px rgba(243,201,139,.16);
 }
+.wish-count{
+  position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  font-family:var(--sans);font-size:10px;letter-spacing:.04em;
+  color:rgba(244,233,220,.3);pointer-events:none;
+}
+.wish-send{
+  font-family:var(--serif);font-size:12.5px;letter-spacing:.22em;text-indent:.22em;
+  color:#1a1226;background:linear-gradient(180deg,#ffe6bc,#e9b877);
+  border:none;border-radius:999px;padding:10px 30px;cursor:pointer;
+  box-shadow:0 6px 22px rgba(233,184,119,.28);
+  transition:transform .2s, box-shadow .25s;
+}
+.wish-send:active{transform:scale(.96)}
 .wish-done{
-  display:none;margin-top:26px;
-  font-family:var(--sans);font-size:11.5px;letter-spacing:.2em;
+  display:none;margin:22px auto 0;padding:6px 10px;
+  font-family:var(--sans);font-size:11.5px;letter-spacing:.16em;
   color:rgba(243,201,139,.72);
+  background:none;border:none;cursor:pointer;
   animation:tipIn .8s ease both;
 }
 .wish-done.show{display:block}
@@ -548,10 +572,18 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
     <div class="wish-entry" id="wishEntry">
       <button class="wish-btn" id="wishBtn">✦ 许 一 个 愿</button>
       <div class="wish-form" id="wishForm">
-        <input id="wishInput" type="text" maxlength="24" placeholder="写下来，它会飞上天" />
-        <button id="wishSend">放 飞</button>
+        <div class="wish-chips" id="wishChips">
+          <button class="chip" data-w="身体健康">身体健康</button>
+          <button class="chip" data-w="天天开心">天天开心</button>
+          <button class="chip" data-w="平安顺遂">平安顺遂</button>
+        </div>
+        <div class="wish-row">
+          <input id="wishInput" type="text" maxlength="24" placeholder="写下你的愿望" />
+          <span class="wish-count" id="wishCount">0/24</span>
+        </div>
+        <button class="wish-send" id="wishSend">放 飞</button>
       </div>
-      <p class="wish-done" id="wishDone">愿望已经飞到天上了 ✦</p>
+      <button class="wish-done" id="wishDone">愿望已经飞到天上了 ✦ 点这里再许一个</button>
     </div>
 
     <p class="scroll-tip">↓ 还有一封想说的话</p>
@@ -890,6 +922,7 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
      ========================================================= */
   const stars = [];
   const dust = [];
+  const petals = [];
   const sparks = [];
   const meteors = [];
   const waves = [];
@@ -918,35 +951,6 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
       ));
     } catch (e) { /* ignore */ }
   }
-
-  function drawWishStars(now) {
-    if (!wishStars.length) return;
-    ctx.globalCompositeOperation = 'lighter';
-    for (let i = 0; i < wishStars.length; i++) {
-      const w = wishStars[i];
-      const p = Math.min(1, (now - w.born) / 1600);
-      const e = 1 - Math.pow(1 - p, 3);
-      const x = w.x * W;
-      const y = (0.92 * H) + (w.y * H - 0.92 * H) * e;
-      const tw = 0.62 + 0.38 * Math.sin(now * 0.0022 + w.ph);
-      const r = 11;
-      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
-      g.addColorStop(0, 'rgba(255,232,180,' + (0.5 * tw * e) + ')');
-      g.addColorStop(0.4, 'rgba(255,200,120,' + (0.16 * tw * e) + ')');
-      g.addColorStop(1, 'rgba(255,180,90,0)');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, 6.2832);
-      ctx.fill();
-      ctx.globalAlpha = tw * e;
-      ctx.fillStyle = '#fff6dd';
-      ctx.beginPath();
-      ctx.arc(x, y, 1.5, 0, 6.2832);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-  }
-  const petals = [];
 
   function buildStars() {
     stars.length = 0;
@@ -1017,11 +1021,11 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
   function drawStars(t) {
     ctx.globalCompositeOperation = 'source-over';
     for (let i = 0; i < stars.length; i++) {
-      const s = stars[i];
-      const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.001 * s.sp + s.ph));
-      ctx.globalAlpha = tw * s.a;
+      const st = stars[i];
+      const tw = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * 0.001 * st.sp + st.ph));
+      ctx.globalAlpha = tw * st.a;
       ctx.fillStyle = '#dfe6ff';
-      ctx.fillRect(s.x * W, s.y * H, s.r, s.r);
+      ctx.fillRect(st.x * W, st.y * H, st.r, st.r);
     }
     ctx.globalAlpha = 1;
 
@@ -1048,7 +1052,8 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
     if (meteors.length > 1) return;
     const sx = Math.random() * W * 0.7 + W * 0.2;
     meteors.push({
-      x: sx, y: Math.random() * H * 0.25,
+      x: sx,
+      y: Math.random() * H * 0.25,
       vx: -(3 + Math.random() * 3),
       vy: 1.6 + Math.random() * 1.4,
       life: 1
@@ -1069,6 +1074,139 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
       ctx.fill();
     }
     ctx.globalAlpha = 1;
+  }
+
+  let starSprite = null;
+
+  function makeStarSprite() {
+    const size = 128, c = size / 2;
+    const cv = document.createElement('canvas');
+    cv.width = size; cv.height = size;
+    const g = cv.getContext('2d');
+
+    const rg = g.createRadialGradient(c, c, 0, c, c, c * 0.44);
+    rg.addColorStop(0, 'rgba(255,252,240,1)');
+    rg.addColorStop(0.22, 'rgba(255,232,180,0.72)');
+    rg.addColorStop(0.6, 'rgba(255,206,130,0.16)');
+    rg.addColorStop(1, 'rgba(255,196,110,0)');
+    g.fillStyle = rg;
+    g.beginPath();
+    g.arc(c, c, c * 0.44, 0, 6.2832);
+    g.fill();
+
+    g.globalCompositeOperation = 'lighter';
+    const beam = (ang, len, w) => {
+      g.save();
+      g.translate(c, c);
+      g.rotate(ang);
+      const lg = g.createLinearGradient(0, 0, len, 0);
+      lg.addColorStop(0, 'rgba(255,250,232,0.95)');
+      lg.addColorStop(0.35, 'rgba(255,225,170,0.32)');
+      lg.addColorStop(1, 'rgba(255,210,150,0)');
+      g.fillStyle = lg;
+      g.beginPath();
+      g.moveTo(0, -w);
+      g.lineTo(len, 0);
+      g.lineTo(0, w);
+      g.closePath();
+      g.fill();
+      g.restore();
+    };
+    beam(0, c, 2.2);
+    beam(Math.PI, c, 2.2);
+    beam(Math.PI / 2, c * 0.74, 1.6);
+    beam(-Math.PI / 2, c * 0.74, 1.6);
+    return cv;
+  }
+
+  function drawWishStars(now) {
+    if (!wishStars.length || !starSprite) return;
+    ctx.globalCompositeOperation = 'lighter';
+
+    // 星座连线
+    if (wishStars.length > 1) {
+      ctx.strokeStyle = 'rgba(255,214,160,0.14)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      let started = false;
+      for (let i = 1; i < wishStars.length; i++) {
+        const a = wishStars[i - 1];
+        const b = wishStars[i];
+        if (now - a.born < 950 || now - b.born < 950) continue;
+        ctx.moveTo(a.x * W, a.y * H);
+        ctx.lineTo(b.x * W, b.y * H);
+        started = true;
+      }
+      if (started) ctx.stroke();
+    }
+
+    for (let i = 0; i < wishStars.length; i++) {
+      const w = wishStars[i];
+      const since = now - w.born;
+      const p = Math.min(1, since / 900);
+      const e = 1 - Math.pow(1 - p, 3);
+      const x = w.x * W;
+      const y = w.y * H;
+      const tw = 0.68 + 0.32 * Math.sin(now * 0.0021 + w.ph);
+      const size = (28 + 16 * e) * (0.9 + 0.12 * tw);
+
+      ctx.globalAlpha = e * tw * 0.95;
+      ctx.drawImage(starSprite, x - size / 2, y - size / 2, size, size);
+
+      if (since < 900) {
+        const q = since / 900;
+        ctx.globalAlpha = (1 - q) * 0.65;
+        ctx.strokeStyle = 'rgba(255,226,170,1)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(x, y, 4 + q * 44, 0, 6.2832);
+        ctx.stroke();
+      }
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* --- 飞向夜空的光点 --- */
+  const flying = [];
+
+  function updateFlying(now) {
+    if (!flying.length) return;
+    for (let i = flying.length - 1; i >= 0; i--) {
+      const f = flying[i];
+      const p = Math.min(1, (now - f.t0) / f.dur);
+      const e = p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      const mt = 1 - e;
+      const x = mt * mt * f.x0 + 2 * mt * e * f.cx + e * e * f.x1;
+      const y = mt * mt * f.y0 + 2 * mt * e * f.cy + e * e * f.y1;
+
+      sparks.push({
+        x: x + (Math.random() - 0.5) * 6,
+        y: y + (Math.random() - 0.5) * 6,
+        vx: (Math.random() - 0.5) * 0.5,
+        vy: (Math.random() - 0.5) * 0.5,
+        life: 1,
+        decay: 0.055,
+        size: 1 + Math.random() * 1.7,
+        hue: 38
+      });
+
+      if (starSprite) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.globalAlpha = 0.95;
+        ctx.drawImage(starSprite, x - 17, y - 17, 34, 34);
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      }
+
+      if (p >= 1) {
+        wishStars.push({ x: f.tx, y: f.ty, born: now, ph: Math.random() * 6.2832 });
+        if (wishStars.length > 6) wishStars.shift();
+        saveWishes();
+        if (actx) bell(1318.51, actx.currentTime + 0.02, 0.7);
+        flying.splice(i, 1);
+      }
+    }
   }
 
   /* --- 烛光 --- */
@@ -1348,6 +1486,7 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
     ctx.clearRect(0, 0, W, H);
     drawStars(t);
     drawWishStars(now);
+    updateFlying(now);
     drawDust(t);
     drawCandleLight(now);
     drawFlower(t);
@@ -1407,6 +1546,7 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
     meteors.length = 0;
     waves.length = 0;
     fallPetals.length = 0;
+    flying.length = 0;
     state.blowAt = 0;
     flame.classList.remove('out');
     cakeWrap.classList.remove('fade');
@@ -1462,6 +1602,12 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
   const wishInput = $('wishInput');
   const wishSend = $('wishSend');
   const wishDone = $('wishDone');
+  const wishCount = $('wishCount');
+  const wishChips = $('wishChips');
+
+  function updateCount() {
+    if (wishCount) wishCount.textContent = wishInput.value.length + '/24';
+  }
 
   function sendWish() {
     const text = (wishInput.value || '').trim();
@@ -1469,29 +1615,53 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
 
     wishForm.classList.remove('show');
     wishBtn.style.display = 'none';
-    wishDone.classList.add('show');
 
+    // 1. 文字升起
     const fly = document.createElement('div');
     fly.className = 'fly-wish';
     fly.textContent = text;
     document.body.appendChild(fly);
+
+    const rect = fly.getBoundingClientRect();
+    const startX = rect.left + rect.width / 2;
+    const startY = rect.top + rect.height / 2;
+
     if (fly.animate) {
       fly.animate([
-        { opacity: 0, transform: 'translate(-50%, 12px) scale(.92)' },
-        { opacity: 1, transform: 'translate(-50%, -30px) scale(1)', offset: 0.3 },
-        { opacity: 0, transform: 'translate(-50%, -220px) scale(.6)' }
-      ], { duration: 2400, easing: 'cubic-bezier(.2,.6,.3,1)' });
+        { opacity: 0, transform: 'translate(-50%, 14px) scale(.94)' },
+        { opacity: 1, transform: 'translate(-50%, -26px) scale(1)', offset: 0.26 },
+        { opacity: 1, transform: 'translate(-50%, -40px) scale(1.03)', offset: 0.6 },
+        { opacity: 0, transform: 'translate(-50%, -78px) scale(.6)' }
+      ], { duration: 1900, easing: 'cubic-bezier(.25,.6,.35,1)' });
     }
-    setTimeout(() => fly.remove(), 2600);
+    setTimeout(() => fly.remove(), 2000);
 
-    wishStars.push({
-      x: 0.15 + Math.random() * 0.7,
-      y: 0.07 + Math.random() * 0.22,
-      born: performance.now(),
-      ph: Math.random() * 6.2832
-    });
-    if (wishStars.length > 6) wishStars.shift();
-    saveWishes();
+    // 2. 光点从文字处起飞
+    const tx = 0.15 + Math.random() * 0.7;
+    const ty = 0.07 + Math.random() * 0.2;
+    const idx = wishStars.length + 1;
+
+    setTimeout(() => {
+      flying.push({
+        x0: startX,
+        y0: startY,
+        cx: startX + (Math.random() - 0.5) * W * 0.55,
+        cy: startY - H * 0.42,
+        x1: tx * W,
+        y1: ty * H,
+        tx: tx,
+        ty: ty,
+        t0: performance.now(),
+        dur: 1250
+      });
+    }, 950);
+
+    // 3. 落地提示
+    setTimeout(() => {
+      wishDone.textContent = '这是你在天上点亮的第 ' + idx + ' 颗星 ✦';
+      wishDone.classList.add('show');
+    }, 2300);
+
     chime();
   }
 
@@ -1501,9 +1671,30 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
       wishForm.classList.add('show');
       setTimeout(() => { try { wishInput.focus(); } catch (e) { /* ignore */ } }, 80);
     });
+
     wishSend.addEventListener('click', sendWish);
+
+    wishInput.addEventListener('input', updateCount);
     wishInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') { e.preventDefault(); sendWish(); }
+    });
+
+    wishDone.addEventListener('click', () => {
+      wishDone.classList.remove('show');
+      wishForm.classList.add('show');
+      wishInput.value = '';
+      updateCount();
+      setTimeout(() => { try { wishInput.focus(); } catch (err) { /* ignore */ } }, 80);
+    });
+
+    wishChips.addEventListener('click', (e) => {
+      const chip = e.target.closest('.chip');
+      if (!chip) return;
+      const w = chip.getAttribute('data-w');
+      const cur = wishInput.value.trim();
+      wishInput.value = cur ? (cur + '，' + w).slice(0, 24) : w;
+      updateCount();
+      try { wishInput.focus(); } catch (err) { /* ignore */ }
     });
   }
 
@@ -1595,6 +1786,7 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
   buildStars();
   buildDust();
   initPetalSprites();
+  starSprite = makeStarSprite();
   buildFlower();
   loadWishes();
   requestAnimationFrame(frame);
