@@ -246,11 +246,32 @@ body::before{
   transition:background .3s, box-shadow .3s;
 }
 .wish-btn:active{background:rgba(243,201,139,.18)}
-.wish-form{
-  display:none;margin-top:20px;
-  flex-direction:column;align-items:center;gap:11px;
+/* 底部弹出式许愿面板 */
+.wish-sheet{position:fixed;inset:0;z-index:40;display:none}
+.wish-sheet.show{display:block}
+.sheet-mask{
+  position:absolute;inset:0;
+  background:rgba(6,4,12,.62);
+  -webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px);
+  animation:fadeIn .3s ease both;
 }
-.wish-form.show{display:flex;animation:tipIn .5s ease both}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+.sheet{
+  position:absolute;left:0;right:0;bottom:0;
+  max-width:560px;margin:0 auto;
+  display:flex;flex-direction:column;align-items:center;gap:13px;
+  padding:24px 22px calc(26px + env(safe-area-inset-bottom));
+  background:linear-gradient(180deg, rgba(32,24,45,.985), rgba(16,11,24,.995));
+  border-top:1px solid rgba(243,201,139,.22);
+  border-radius:24px 24px 0 0;
+  box-shadow:0 -20px 50px rgba(0,0,0,.55);
+  animation:sheetUp .4s cubic-bezier(.22,.85,.3,1) both;
+}
+@keyframes sheetUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.sheet-title{
+  font-size:13px;letter-spacing:.24em;text-indent:.24em;
+  color:rgba(243,201,139,.85);margin-bottom:4px;
+}
 .wish-chips{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
 .chip{
   font-family:var(--sans);font-size:11.5px;letter-spacing:.06em;
@@ -263,7 +284,7 @@ body::before{
 .chip:active{background:rgba(243,201,139,.22);border-color:rgba(243,201,139,.6);color:#fff2dc}
 .wish-row{position:relative;display:flex;align-items:center}
 #wishInput{
-  width:min(264px,70vw);
+  width:min(280px,76vw);
   background:rgba(255,255,255,.05);
   border:1px solid rgba(243,201,139,.3);border-radius:999px;
   padding:12px 52px 12px 18px;color:#f4e9dc;
@@ -571,18 +592,6 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
 
     <div class="wish-entry" id="wishEntry">
       <button class="wish-btn" id="wishBtn">✦ 许 一 个 愿</button>
-      <div class="wish-form" id="wishForm">
-        <div class="wish-chips" id="wishChips">
-          <button class="chip" data-w="身体健康">身体健康</button>
-          <button class="chip" data-w="天天开心">天天开心</button>
-          <button class="chip" data-w="平安顺遂">平安顺遂</button>
-        </div>
-        <div class="wish-row">
-          <input id="wishInput" type="text" maxlength="24" placeholder="写下你的愿望" />
-          <span class="wish-count" id="wishCount">0/24</span>
-        </div>
-        <button class="wish-send" id="wishSend">放 飞</button>
-      </div>
       <button class="wish-done" id="wishDone">愿望已经飞到天上了 ✦ 点这里再许一个</button>
     </div>
 
@@ -630,6 +639,24 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
     <p class="end-small">MADE WITH LOVE</p>
   </footer>
 </main>
+
+<!-- 许愿面板 -->
+<div class="wish-sheet" id="wishSheet">
+  <div class="sheet-mask" id="sheetMask"></div>
+  <div class="sheet">
+    <p class="sheet-title">写 一 个 愿 望</p>
+    <div class="wish-chips" id="wishChips">
+      <button class="chip" data-w="身体健康">身体健康</button>
+      <button class="chip" data-w="天天开心">天天开心</button>
+      <button class="chip" data-w="平安顺遂">平安顺遂</button>
+    </div>
+    <div class="wish-row">
+      <input id="wishInput" type="text" maxlength="24" placeholder="写下你的愿望" />
+      <span class="wish-count" id="wishCount">0/24</span>
+    </div>
+    <button class="wish-send" id="wishSend">放 飞</button>
+  </div>
+</div>
 
 <button class="sound-btn" id="soundBtn" aria-label="声音开关">♪</button>
 
@@ -1598,7 +1625,8 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
 
   /* ---------- 许愿 ---------- */
   const wishBtn = $('wishBtn');
-  const wishForm = $('wishForm');
+  const wishSheet = $('wishSheet');
+  const sheetMask = $('sheetMask');
   const wishInput = $('wishInput');
   const wishSend = $('wishSend');
   const wishDone = $('wishDone');
@@ -1613,8 +1641,9 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
     const text = (wishInput.value || '').trim();
     if (!text) { wishInput.focus(); return; }
 
-    wishForm.classList.remove('show');
+    wishSheet.classList.remove('show');
     wishBtn.style.display = 'none';
+    wishSent = true;
 
     // 1. 文字升起
     const fly = document.createElement('div');
@@ -1665,11 +1694,27 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
     chime();
   }
 
+  function openSheet() {
+    wishSheet.classList.add('show');
+    setTimeout(() => { try { wishInput.focus(); } catch (e) { /* ignore */ } }, 320);
+  }
+
+  let wishSent = false;
+
   if (wishBtn) {
     wishBtn.addEventListener('click', () => {
       wishBtn.style.display = 'none';
-      wishForm.classList.add('show');
-      setTimeout(() => { try { wishInput.focus(); } catch (e) { /* ignore */ } }, 80);
+      openSheet();
+    });
+
+    // 点遮罩关闭：恢复到打开前的状态
+    sheetMask.addEventListener('click', () => {
+      wishSheet.classList.remove('show');
+      if (wishSent) {
+        wishDone.classList.add('show');
+      } else {
+        wishBtn.style.display = '';
+      }
     });
 
     wishSend.addEventListener('click', sendWish);
@@ -1681,10 +1726,9 @@ body.tip-open .sound-btn{opacity:0;pointer-events:none}
 
     wishDone.addEventListener('click', () => {
       wishDone.classList.remove('show');
-      wishForm.classList.add('show');
       wishInput.value = '';
       updateCount();
-      setTimeout(() => { try { wishInput.focus(); } catch (err) { /* ignore */ } }, 80);
+      openSheet();
     });
 
     wishChips.addEventListener('click', (e) => {
